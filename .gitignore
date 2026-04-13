@@ -1,0 +1,7 @@
+node_modules
+.env
+*.exe
+ffmpeg-*
+*.mp3
+*.webm
+deno
