@@ -16,8 +16,8 @@ const fs = require("fs");
 // ⚠️ YA NO HAY TOKEN AQUÍ
 
 const BOT_DIR = __dirname;
-const YTDLP_PATH = path.join(BOT_DIR, "yt-dlp.exe");
-const FFMPEG_PATH = path.join(BOT_DIR, "ffmpeg.exe");
+const YTDLP_PATH = "yt-dlp";
+const FFMPEG_PATH = "ffmpeg";
 
 const client = new Client({
     intents: [
