@@ -10,14 +10,6 @@ const {
     VoiceConnectionStatus
 } = require("@discordjs/voice");
 const { spawn } = require("child_process");
-const path = require("path");
-const fs = require("fs");
-
-// ⚠️ YA NO HAY TOKEN AQUÍ
-
-const BOT_DIR = __dirname;
-const YTDLP_PATH = "yt-dlp";
-const FFMPEG_PATH = "ffmpeg";
 
 const client = new Client({
     intents: [
@@ -28,57 +20,49 @@ const client = new Client({
     ]
 });
 
+const YTDLP_PATH = "yt-dlp";
+const FFMPEG_PATH = "ffmpeg";
+
 const queue = new Map();
 
 client.once("ready", () => {
     console.log(`✅ Bot conectado como ${client.user.tag}`);
-    console.log(`📁 Directorio: ${BOT_DIR}`);
-    
-    if (fs.existsSync(YTDLP_PATH)) console.log(`✅ yt-dlp encontrado`);
-    if (fs.existsSync(FFMPEG_PATH)) console.log(`✅ ffmpeg encontrado`);
 });
 
+// 🔍 BUSCAR CANCIÓN (FIXED)
 async function searchSong(query) {
     return new Promise((resolve, reject) => {
         console.log(`🔍 Buscando: ${query}`);
         
         const ytdlp = spawn(YTDLP_PATH, [
-            "-J",
-            `ytsearch1:${query}`
+            "ytsearch1:" + query,
+            "--get-id"
         ]);
         
         let data = "";
         
         ytdlp.stdout.on("data", chunk => data += chunk.toString());
-        ytdlp.stderr.on("data", () => {});
+        ytdlp.stderr.on("data", err => console.log("yt-dlp error:", err.toString()));
         
         ytdlp.on("close", code => {
-            if (code !== 0) {
+            if (code !== 0 || !data.trim()) {
                 reject("yt-dlp falló");
                 return;
             }
             
-            try {
-                const json = JSON.parse(data);
-                if (json.entries && json.entries.length > 0) {
-                    resolve(json.entries[0].webpage_url);
-                } else {
-                    reject("No se encontraron resultados");
-                }
-            } catch (err) {
-                reject("Error al procesar resultado");
-            }
+            const videoId = data.trim();
+            resolve(`https://www.youtube.com/watch?v=${videoId}`);
         });
     });
 }
 
+// 🎵 OBTENER TÍTULO
 async function getVideoTitle(url) {
     return new Promise((resolve, reject) => {
-        const ytdlp = spawn(YTDLP_PATH, ["-e", "--js-runtimes", "deno", url]);
+        const ytdlp = spawn(YTDLP_PATH, ["-e", url]);
         let title = "";
         
         ytdlp.stdout.on("data", chunk => title += chunk.toString());
-        ytdlp.stderr.on("data", () => {});
         
         ytdlp.on("close", code => {
             if (code === 0 && title.trim()) {
@@ -90,6 +74,7 @@ async function getVideoTitle(url) {
     });
 }
 
+// ▶️ REPRODUCIR
 async function playSong(guildId, connection) {
     const serverQueue = queue.get(guildId);
     
@@ -103,11 +88,9 @@ async function playSong(guildId, connection) {
     console.log(`🎵 Reproduciendo: ${song.title}`);
     
     const ytdlp = spawn(YTDLP_PATH, [
-        "-f", "140",
+        "-f", "bestaudio",
         "-o", "-",
         "--no-playlist",
-        "--js-runtimes", "deno",
-        "--no-check-certificates",
         song.url
     ]);
     
@@ -151,6 +134,7 @@ async function playSong(guildId, connection) {
     });
 }
 
+// 💬 COMANDOS
 client.on("messageCreate", async (message) => {
     if (!message.guild || message.author.bot) return;
     
@@ -190,7 +174,8 @@ client.on("messageCreate", async (message) => {
             } else {
                 msg.edit(`📝 Agregado: ${title}`);
             }
-        } catch {
+        } catch (err) {
+            console.log(err);
             msg.edit("❌ No se encontró la canción");
         }
     }
