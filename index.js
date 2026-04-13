@@ -44,7 +44,6 @@ async function searchSong(query) {
         
         const ytdlp = spawn(YTDLP_PATH, [
             "-J",
-            "--js-runtimes", "deno",
             `ytsearch1:${query}`
         ]);
         
